@@ -139,6 +139,7 @@ class MyRenderArea(QWidget):
         self.score1 = 0
         self.score2 = 0
 
+        self.level_id = 1
         self.wallscoordinates = []
         self.walls = []
         self.wallsbuild = False
@@ -156,17 +157,22 @@ class MyRenderArea(QWidget):
     def readData(self):
         instr = QDataStream(self.tcpSocket)
         raw_data = instr.readQString()
-        print(raw_data)
 
         if raw_data != "":
             self.writeData()
             self.update()
+        data = raw_data.split("l")
 
-        data = raw_data.split("p")
+        if self.level_id != int(data[1]):
+            self.level_id = int(data[1])
+            self.lebendig = False
+            print("HI", self.wallsbuild)
 
-        if len(data) > 1:
-            del data[0]
-            self.game_data = data
+        data_players = data[0].split("p")
+
+        if len(data_players) > 1:
+            del data_players[0]
+            self.game_data = data_players
 
     def writeData(self):
         block = QByteArray()
@@ -178,6 +184,8 @@ class MyRenderArea(QWidget):
                 controls += "1"
             else:
                 controls += "0"
+        if self.players[1].keyDown[4]:
+            self.players[1].keyDown[4] = False
         print("OUT: ", controls)
 
         out.writeQString(controls)
@@ -274,6 +282,7 @@ class MyRenderArea(QWidget):
 
 
     def createWalls(self, ran):
+        print("HEEELLLUUUUUU", ran)
         self.wallsbuild = True
         for i in range(4):
             for j in range(4):
@@ -508,7 +517,7 @@ class MyRenderArea(QWidget):
                 self.alive = True
 
         if not self.wallsbuild:
-            self.createWalls(random.randint(1,8))
+            self.createWalls(self.level_id)
 
         self.playerMovement()
 

@@ -93,6 +93,7 @@ class Player():
         self.winkel = 0
         self.winkelnext = 0
         self.alive = True
+        self.ballcount = 0
         if ID == 1:
             self.x = 100
             self.y = 100
@@ -133,6 +134,7 @@ class MyRenderArea(QWidget):
         self.score1 = 0
         self.score2 = 0
 
+        self.level_id = 0
         self.wallscoordinates = []
         self.walls = []
         self.wallsbuild = False
@@ -197,7 +199,7 @@ class MyRenderArea(QWidget):
             data += "p" + str(player_index) + "#" + "0" + "#" + str(round(pos[0],2)) + "#" + str(round(pos[1],2)) + "#" + str(round(
                 player.winkel, 2))
             player_index += 1
-
+        data += "l" + str(self.level_id)
         return data
 
     def writeData(self):
@@ -229,11 +231,8 @@ class MyRenderArea(QWidget):
                 if e.key() == Qt.Key_D:
                     i.keyDown[3] = True
                 if e.key() == Qt.Key_V:
-                    if self.ballcount1 < 6:
-                        self.ballcount1 += 1
-                        self.spawnBall(i.winkel, i.x, i.y, i.ID)
-                    else:
-                        pass
+                    i.keyDown[4] = True
+
             '''
             if i.ID == 2:
                 if e.key() == Qt.Key_Up:
@@ -294,6 +293,13 @@ class MyRenderArea(QWidget):
                 i.winkelnext = - 0.05
             if i.keyDown[3]:
                 i.winkelnext = + 0.05
+            if i.keyDown[4]:
+                i.keyDown[4] = False
+                if i.ballcount < 6:
+                    i.ballcount += 1
+                    self.spawnBall(i.winkel, i.x, i.y, i.ID)
+                else:
+                    pass
 
             if i.keyDown[0] == False and i.keyDown[1] == False:
                 i.velx = 0
@@ -550,7 +556,8 @@ class MyRenderArea(QWidget):
                 self.alive = True
 
         if not self.wallsbuild:
-            self.createWalls(random.randint(1, 8))
+            self.level_id = random.randint(1, 8)
+            self.createWalls(self.level_id)
 
         self.playerMovment()
 
