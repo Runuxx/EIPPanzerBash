@@ -86,7 +86,7 @@ class Wall():
 
 class Player():
     def __init__(self, ID):
-        self.keyDown = [False,False,False,False]
+        self.keyDown = [False, False, False, False, False]
         self.ID = ID
         self.velx = 0
         self.vely = 0
@@ -180,14 +180,13 @@ class MyRenderArea(QWidget):
         instr = QDataStream(self.tcpSocket)
         data = instr.readQString()
         print(data)
-        '''
-        controls = [False, False, False, False, False]
         for i in range(len(data)):
             if data[i] == "1":
-                self.controls2[i] = True
+                self.players[1].keyDown[i] = True
             else:
-                self.controls2[i] = False
-        '''
+                self.players[1].keyDown[i] = False
+        #print("KEYREADOUT", self.players[1].keyDown)
+
 
     def encode_game(self):
         data = ""
@@ -195,8 +194,8 @@ class MyRenderArea(QWidget):
         # Format: pID#POSX#POSY#ROT
         for player in self.players:
             pos = (player.x, player.y)
-            data += "p" + str(player_index) + "#" + "0" + "#" + str(pos[0]) + "#" + str(pos[1]) + "#" + str(
-                player.winkel)
+            data += "p" + str(player_index) + "#" + "0" + "#" + str(round(pos[0],2)) + "#" + str(round(pos[1],2)) + "#" + str(round(
+                player.winkel, 2))
             player_index += 1
 
         return data
@@ -204,7 +203,6 @@ class MyRenderArea(QWidget):
     def writeData(self):
         block = QByteArray()
         out = QDataStream(block, QIODevice.ReadWrite)
-        controls = ""
         data = self.encode_game()
         print(data)
         out.writeQString(data)
@@ -279,14 +277,11 @@ class MyRenderArea(QWidget):
                 if e.key() == Qt.Key_Right:
                     i.keyDown[3] = False
 
-            if i.keyDown[0] == False and i.keyDown[1] == False:
-                i.velx = 0
-                i.vely = 0
-            if i.keyDown[2] == False and i.keyDown[3] == False:
-                i.winkelnext = 0
+
 
     def playerMovment(self):
         for i in self.players:
+            print(i.ID, i.keyDown)
             max_speed = 0.4
 
             if i.keyDown[0]:
@@ -299,6 +294,12 @@ class MyRenderArea(QWidget):
                 i.winkelnext = - 0.05
             if i.keyDown[3]:
                 i.winkelnext = + 0.05
+
+            if i.keyDown[0] == False and i.keyDown[1] == False:
+                i.velx = 0
+                i.vely = 0
+            if i.keyDown[2] == False and i.keyDown[3] == False:
+                i.winkelnext = 0
 
 
             if i.x + self.ballsize > self.width():

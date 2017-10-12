@@ -87,7 +87,7 @@ class Wall():
 
 class Player():
     def __init__(self, ID):
-        self.keyDown = [False,False,False,False]
+        self.keyDown = [False,False,False,False,False]
         self.ID = ID
         self.velx = 0
         self.vely = 0
@@ -104,6 +104,11 @@ class Player():
             self.y = 500
             self.color = 'blue'
 
+    def position_player(self, raw_data):
+        data = raw_data.split("#")
+        self.x = float(data[2])
+        self.y = float(data[3])
+        self.winkel = float(data[4])
 
 
 
@@ -152,15 +157,12 @@ class MyRenderArea(QWidget):
         instr = QDataStream(self.tcpSocket)
         raw_data = instr.readQString()
         print(raw_data)
-        self.writeData()
-        self.update()
 
         if raw_data != "":
             self.writeData()
             self.update()
 
         data = raw_data.split("p")
-        print(self.game_data)
 
         if len(data) > 1:
             del data[0]
@@ -169,16 +171,16 @@ class MyRenderArea(QWidget):
     def writeData(self):
         block = QByteArray()
         out = QDataStream(block, QIODevice.ReadWrite)
-        '''
+
         controls = ""
-        for b in self.controls:
+        for b in self.players[1].keyDown:
             if b:
                 controls += "1"
             else:
                 controls += "0"
-        # print("OUT: ", controls)
-        '''
-        out.writeQString("HAllo")
+        print("OUT: ", controls)
+
+        out.writeQString(controls)
         self.tcpSocket.write(block)
 
     def getRun(self):
@@ -202,34 +204,17 @@ class MyRenderArea(QWidget):
                 if e.key() == Qt.Key_D:
                     i.keyDown[3] = True
                 if e.key() == Qt.Key_V:
-                    if self.ballcount1 < 6:
-                        self.ballcount1 += 1
-                        self.spawnBall(i.winkel, i.x, i.y, i.ID)
-                    else: pass
-            '''
-            if i.ID == 2:
-                if e.key() == Qt.Key_Up:
-                    i.keyDown[0] = True
-                if e.key() == Qt.Key_Down:
-                    i.keyDown[1] = True
-                if e.key() == Qt.Key_Left:
-                    i.keyDown[2] = True
-                if e.key() == Qt.Key_Right:
-                    i.keyDown[3] = True
-                if e.key() == Qt.Key_M:
-                    if self.ballcount2 < 6:
-                        self.ballcount2 += 1
-                        self.spawnBall(i.winkel, i.x, i.y, i.ID)
-                    else: pass
-            '''
+                    i.keyDown[4] = True
 
-        if e.key() == Qt.Key_G:
-            self.run = False
-
+    def position_players(self):
+        index = 0
+        for player in self.players:
+            player.position_player(self.game_data[index])
+            index += 1
 
     def keyReleaseEvent(self, e):
         for i in self.players:
-            if i.ID == 1:
+            if i.ID == 2:
                 if e.key() == Qt.Key_W:
                     i.keyDown[0] = False
                 if e.key() == Qt.Key_S:
@@ -238,6 +223,8 @@ class MyRenderArea(QWidget):
                     i.keyDown[2] = False
                 if e.key() == Qt.Key_D:
                     i.keyDown[3] = False
+                if e.key() == Qt.Key_V:
+                    i.keyDown[4] = False
             '''
             if i.ID == 2:
                 if e.key() == Qt.Key_Up:
@@ -256,7 +243,7 @@ class MyRenderArea(QWidget):
             if i.keyDown[2] == False and i.keyDown[3] == False:
                 i.winkelnext = 0
 
-    def playerMovment(self):
+    def playerMovement(self):
 
         max_speed = 0.4
 
@@ -495,6 +482,7 @@ class MyRenderArea(QWidget):
 
     def paintEvent(self, e):
 
+        self.position_players()
         if not self.lebendig:
             self.run = False
         if not self.run:
@@ -522,7 +510,7 @@ class MyRenderArea(QWidget):
         if not self.wallsbuild:
             self.createWalls(random.randint(1,8))
 
-        self.playerMovment()
+        self.playerMovement()
 
         self.getBoundeWallPlayer()
         painter = QPainter(self)
