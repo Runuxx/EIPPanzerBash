@@ -196,8 +196,8 @@ class MyRenderArea(QWidget):
         # Format: pID#POSX#POSY#ROT
         for player in self.players:
             pos = (player.x, player.y)
-            data += "p" + str(player_index) + "#" + "0" + "#" + str(round(pos[0],2)) + "#" + str(round(pos[1],2)) + "#" + str(round(
-                player.winkel, 2))
+            data += "p" + str(player_index) + "#" + "0" + "#" + str(round(pos[0], 4)) + "#" + str(round(pos[1], 4)) + "#" + str(round(
+                player.winkel, 4))
             player_index += 1
         data += "l" + str(self.level_id)
         return data
@@ -281,7 +281,7 @@ class MyRenderArea(QWidget):
     def playerMovment(self):
         for i in self.players:
             print(i.ID, i.keyDown)
-            max_speed = 0.4
+            max_speed = 0.004
 
             if i.keyDown[0]:
                 i.velx = (math.cos(i.winkel) * max_speed)
@@ -326,7 +326,7 @@ class MyRenderArea(QWidget):
         self.wallsbuild = True
         for i in range(4):
             for j in range(4):
-                a = [(1 / 4) * j, (2 / 4) * i]
+                a = [(1 / 4) * j, (1 / 4) * i]
                 self.wallscoordinates.append(a)
         if ran == 1:
             self.wallscoordinates[0].append(3)
@@ -614,7 +614,7 @@ class MyRenderArea(QWidget):
 
         self.main.statusBar().clearMessage()
         self.main.statusBar().showMessage("Score Player1: " + str(self.score1) + "\t" +
-                                          "Score Player2: " + str(self.score2))
+                                          "Score Player2: " + str(self.score2) + " Server")
 
 
 
@@ -625,7 +625,7 @@ class MyRenderArea(QWidget):
 class MyMainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setGeometry(100, 100, 600, 600)
+        self.setGeometry(700, 100, 600, 600)
 
         self.renderarea = MyRenderArea(self)
 

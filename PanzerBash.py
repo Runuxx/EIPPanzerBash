@@ -396,10 +396,10 @@ class MyRenderArea(QWidget):
     def getbounceBallPlayer(self, ball, j):
                 d = math.sqrt((ball.getX() - j.x) ** 2 + (ball.getY() - j.y) ** 2)
                 if d < 17:
-                    if ball.ID == 1:
+                    if j.ID == 1:
                         self.ballcount1 -= 1
                         self.score2 += 1
-                    elif ball.ID == 2:
+                    elif j.ID == 2:
                         self.ballcount2 -= 1
                         self.score1 += 1
                     self.balls.remove(ball)
@@ -478,10 +478,10 @@ class MyRenderArea(QWidget):
         if not self.wallsbuild:
             self.createWalls()
 
-        self.playerMovment()
+        self.playerMovement()
 
         self.getBoundeWallPlayer()
-        self.getBoundePlayer_Player()
+        #self.getBoundePlayer_Player()
         painter = QPainter(self)
 
         for j in self.players:
