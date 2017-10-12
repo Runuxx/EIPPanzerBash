@@ -1,12 +1,11 @@
 """Game of Fabian Peters, Tim Heussler, Till Goebel, Taner Celik"""
 
-from PyQt5.QtCore import Qt, QRect, QLine, QPoint, QTimer, QByteArray, QDataStream, QIODevice
+from PyQt5.QtCore import Qt, QRect, QLine, QPoint
 from PyQt5.QtGui import QColor, QPainter, QPen, QImage
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QMenu
-from PyQt5.QtNetwork import QTcpServer, QHostAddress
 import math, random
 
-from PyQt5 import QtGui
+from qtpy import QtGui
 
 
 class Ball():
@@ -52,51 +51,55 @@ class Ball():
 
 
 class Wall():
-    def __init__(self, x, y, seite, height, width, ox, oy, len):
+    def __init__(self, x, y, seite, height, width):
         self.width = width
         self.height = height
         self.seite = seite
         self.x = x
         self.y = y
-        self.draw(ox, oy, len)
+        self.draw()
 
-    def draw(self, ox, oy, len):
+    def draw(self):
         if self.seite == 4:
-            self.points = QPoint(ox + len * self.x, oy + len * self.y)
-            self.pointe = QPoint(ox + len * self.x,oy + len *  (self.y + self.height / 4))
+            self.points = QPoint(self.x, self.y)
+            self.pointe = QPoint(self.x, self.y + self.height / 4)
         if self.seite == 1:
-            self.points = QPoint(ox + len * self.x, oy + len * self.y)
-            self.pointe = QPoint(ox + len * (self.x + self.width / 4), oy + len * self.y)
+            self.points = QPoint(self.x, self.y)
+            self.pointe = QPoint(self.x + self.width / 4, self.y)
         if self.seite == 2:
-            self.points = QPoint(ox + len * (self.x + self.width / 4), oy + len * self.y)
-            self.pointe = QPoint(ox + len * (self.x + self.width / 4), oy + len * (self.y + self.height / 4))
+            self.points = QPoint(self.x + self.width / 4, self.y)
+            self.pointe = QPoint(self.x + self.width / 4, self.y + self.height / 4)
         if self.seite == 3:
-            self.points = QPoint(ox + len * self.x, oy + len * (self.y + self.height / 4))
-            self.pointe = QPoint(ox + len * (self.x + self.width / 4), oy + len * (self.y + self.height / 4))
+            self.points = QPoint(self.x, self.y + self.height / 4)
+            self.pointe = QPoint(self.x + self.width / 4, self.y + self.height / 4)
 
 
+    def getStart(self):
+        return self.points
+
+    def getEnd(self):
+        return self.pointe
 
     def getSeite(self):
         return self.seite
 
 class Player():
     def __init__(self, ID):
-        self.keyDown = [False, False, False, False, False]
+        self.keyDown = [False,False,False,False]
         self.ID = ID
         self.velx = 0
         self.vely = 0
         self.winkel = 0
         self.winkelnext = 0
         self.alive = True
-        self.ballcount = 0
         if ID == 1:
-            self.x = 0.1
-            self.y = 0.1
+            self.x = 100
+            self.y = 100
             self.color = 'yellow'
 
         if ID == 2:
-            self.x = 0.9
-            self.y = 0.9
+            self.x = 500
+            self.y = 500
             self.color = 'blue'
 
 
@@ -109,11 +112,6 @@ class MyRenderArea(QWidget):
         self.setFocusPolicy(Qt.StrongFocus)
         # Wir laden eine png-Datei (mit Transparenz) und skalieren das Bild
         # auf die gewünschte Größe.
-        self.background_tex = QImage("Ground.png")
-        self.players_tex = [QImage("panzer_0.png"), QImage("panzer_1.png"), QImage("panzer_2.png")]
-        self.explosion_sprites = [QImage("000" + str(i) + ".png") for i in range(1, 10)] + [
-            QImage("00" + str(i) + ".png") for i in range(10, 51)]
-
         self.main = parent
         self.lebendig = True
         self.alive = False
@@ -134,81 +132,11 @@ class MyRenderArea(QWidget):
         self.score1 = 0
         self.score2 = 0
 
-        self.level_id = 0
         self.wallscoordinates = []
         self.walls = []
         self.wallsbuild = False
         self.run = True
-        self.ups = 60
-        self.connected = False
-        self.timer = QTimer()
-        # Wir richten einen Server ein, zu dem Clients einen Kommunikationskanal
-        # öffnen können.
-        self.tcpServer = QTcpServer(self)
-        # Der Server akzeptiert jeden Client, der auf der angegebenen Port-Nummer
-        # sendet.
-        self.tcpServer.listen(QHostAddress.Any, 40890)
-        # self.tcpServer.listen(QHostAddress('127.0.0.1'), 40890)
 
-        # Falls beim Server eine Verbindungsanfrage von einem Client eingeht,
-        # soll die eigene Memberfunktion connectToClient aufgerufen werden.
-        self.tcpServer.newConnection.connect(self.connectToClient)
-        # Falls ein Fehler beim Server auftritt, kann dieser mit
-        # self.tcpServer.errorString() abgefragt werden.
-
-        # Memberfunktion für eine Verbindungsanfrage eines Clients
-
-
-    def timer_funktion(self):
-        if self.connected:
-            self.writeData()
-        self.update()
-
-    def connectToClient(self):
-        # Über die Membervariable tcpSocket kann der Kommunikationskanal zum
-        # Senden und Empfangen von Nachrichten angesprochen werden.
-        self.tcpSocket = self.tcpServer.nextPendingConnection()
-        # In der Statuszeile geben wir aus, dass sich ein Client mit dem Server
-        # verbunden hat.
-        self.main.statusBar().showMessage('Client connected')
-        self.connected = True
-        # Falls neue Daten zum Lesen vom Client eingetroffen sind, soll die
-        # Memberfunktion readData aufgerufen werden.
-        self.tcpSocket.readyRead.connect(self.readData)
-        self.timer.timeout.connect(self.timer_funktion)
-        self.timer.start(round(1000 / self.ups))
-
-    def readData(self):
-        instr = QDataStream(self.tcpSocket)
-        data = instr.readQString()
-        print(data)
-        for i in range(len(data)):
-            if data[i] == "1":
-                self.players[1].keyDown[i] = True
-            else:
-                self.players[1].keyDown[i] = False
-        #print("KEYREADOUT", self.players[1].keyDown)
-
-
-    def encode_game(self):
-        data = ""
-        player_index = 1
-        # Format: pID#POSX#POSY#ROT
-        for player in self.players:
-            pos = (player.x, player.y)
-            data += "p" + str(player_index) + "#" + "0" + "#" + str(round(pos[0],2)) + "#" + str(round(pos[1],2)) + "#" + str(round(
-                player.winkel, 2))
-            player_index += 1
-        data += "l" + str(self.level_id)
-        return data
-
-    def writeData(self):
-        block = QByteArray()
-        out = QDataStream(block, QIODevice.ReadWrite)
-        data = self.encode_game()
-        print(data)
-        out.writeQString(data)
-        self.tcpSocket.write(block)
 
     def getRun(self):
         return self.run
@@ -231,9 +159,11 @@ class MyRenderArea(QWidget):
                 if e.key() == Qt.Key_D:
                     i.keyDown[3] = True
                 if e.key() == Qt.Key_V:
-                    i.keyDown[4] = True
+                    if self.ballcount1 < 6:
+                        self.ballcount1 += 1
+                        self.spawnBall(i.winkel, i.x, i.y, i.ID)
+                    else: pass
 
-            '''
             if i.ID == 2:
                 if e.key() == Qt.Key_Up:
                     i.keyDown[0] = True
@@ -248,7 +178,7 @@ class MyRenderArea(QWidget):
                         self.ballcount2 += 1
                         self.spawnBall(i.winkel, i.x, i.y, i.ID)
                     else: pass
-            '''
+
 
         if e.key() == Qt.Key_G:
             self.run = False
@@ -276,58 +206,48 @@ class MyRenderArea(QWidget):
                 if e.key() == Qt.Key_Right:
                     i.keyDown[3] = False
 
-
-
-    def playerMovment(self):
-        for i in self.players:
-            print(i.ID, i.keyDown)
-            max_speed = 0.4
-
-            if i.keyDown[0]:
-                i.velx = (math.cos(i.winkel) * max_speed)
-                i.vely = (math.sin(i.winkel) * max_speed)
-            if i.keyDown[1]:
-                i.velx = (math.cos(i.winkel) * max_speed)
-                i.vely = (math.sin(i.winkel) * max_speed)
-            if i.keyDown[2]:
-                i.winkelnext = - 0.05
-            if i.keyDown[3]:
-                i.winkelnext = + 0.05
-            if i.keyDown[4]:
-                i.keyDown[4] = False
-                if i.ballcount < 6:
-                    i.ballcount += 1
-                    self.spawnBall(i.winkel, i.x, i.y, i.ID)
-                else:
-                    pass
-
             if i.keyDown[0] == False and i.keyDown[1] == False:
                 i.velx = 0
                 i.vely = 0
             if i.keyDown[2] == False and i.keyDown[3] == False:
                 i.winkelnext = 0
 
+    def playerMovment(self):
+        for i in self.players:
 
-            if i.x + self.ballsize / self.len > 1:
-                i.x = 1 - self.ballsize / self.len
-            if i.y + self.ballsize / self.len > 1:
-                i.y = 1 - self.ballsize / self.len
-            if i.x - self.ballsize / self.len < 0:
-                i.x = self.ballsize / self.len
-            if i.y - self.ballsize / self.len < 0:
-                i.y = self.ballsize / self.len
+            if i.keyDown[0]:
+                i.velx = (math.cos(i.winkel) * 0.3)
+                i.vely = (math.sin(i.winkel) * 0.3)
+            if i.keyDown[1]:
+                i.velx = -(math.cos(i.winkel) * 0.3)
+                i.vely = -(math.sin(i.winkel) * 0.3)
+            if i.keyDown[2]:
+                i.winkelnext = - 0.01
+            if i.keyDown[3]:
+                i.winkelnext = + 0.01
+
+
+            if i.x + self.ballsize > self.width():
+                i.x = self.width() - self.ballsize
+            if i.y + self.ballsize > self.height():
+                i.y = self.height() - self.ballsize
+            if i.x - self.ballsize < 0:
+                i.x = self.ballsize
+            if i.y - self.ballsize < 0:
+                i.y = self.ballsize
 
             i.x += i.velx
             i.y += i.vely
             i.winkel += i.winkelnext
 
 
-    def createWalls(self, ran):
+    def createWalls(self):
         self.wallsbuild = True
         for i in range(4):
             for j in range(4):
-                a = [(1 / 4) * j, (2 / 4) * i]
+                a = [(self.width() // 4) * j, (self.height() // 4) * i]
                 self.wallscoordinates.append(a)
+        ran = random.randint(1, 8)
         if ran == 1:
             self.wallscoordinates[0].append(3)
             self.wallscoordinates[1].append(0)
@@ -471,82 +391,62 @@ class MyRenderArea(QWidget):
             if (self.wallscoordinates[i][2] != 0):
                 self.walls.append(
                     Wall(self.wallscoordinates[i][0], self.wallscoordinates[i][1], self.wallscoordinates[i][2],
-                         1, 1, self.ox, self.oy, self.len))
+                         self.height(), self.width()))
 
     def getbounceBallPlayer(self, ball, j):
-        d = math.sqrt((ball.x - j.x) ** 2 + (ball.y - j.y) ** 2)
-        if d < 17 / self.len:
-            if ball.ID == 1:
-                self.ballcount1 -= 1
-                self.score2 += 1
-            elif ball.ID == 2:
-                self.ballcount2 -= 1
-                self.score1 += 1
-            self.balls.remove(ball)
-            return True
-        else:
-            return False
+                d = math.sqrt((ball.getX() - j.x) ** 2 + (ball.getY() - j.y) ** 2)
+                if d < 17:
+                    if ball.ID == 1:
+                        self.ballcount1 -= 1
+                        self.score2 += 1
+                    elif ball.ID == 2:
+                        self.ballcount2 -= 1
+                        self.score1 += 1
+                    self.balls.remove(ball)
+                    return True
+                else:
+                    return False
 
     def getBoundeWallPlayer(self):
-
-        for i in self.walls:
-            for j in self.players:
-                d = math.sqrt((i.points.x() - j.x) ** 2 + (i.points.y() - j.y) ** 2)
-                e = math.sqrt((i.pointe.x() - j.x) ** 2 + (i.pointe.y() - j.y) ** 2)
-                verticalwall = (i.points.x() * 100 == j.x * 100 // 1 + self.ballsize / self.len or
-                                i.points.x() * 100 == j.x * 100 // 1 - self.ballsize / self.len) \
-                               and i.points.y() <= j.y < i.pointe.y()
-                horizontalwall = (i.points.y() * 100 == j.y * 100 // 1 + self.ballsize / self.len or
-                                  i.points.y() * 100 == j.y * 100 // 1 - self.ballsize / self.len) \
-                                 and i.points.x() <= j.x < i.pointe.x()
-                if e < 15 / self.len or d < 15 / self.len or horizontalwall or verticalwall:
-                    j.x = j.x - j.velx
-                    j.y = j.y - j.vely
+            for i in self.walls:
+                for j in self.players:
+                    d = math.sqrt((i.points.x() - j.x) ** 2 + (i.points.y() - j.y) ** 2)
+                    e = math.sqrt((i.pointe.x() - j.x) ** 2 + (i.pointe.y() - j.y) ** 2)
+                    verticalwall = (i.points.x() == j.x // 1 + self.ballsize or i.points.x() == j.x // 1 - self.ballsize) \
+                                   and i.points.y() <= j.y < i.pointe.y()
+                    horizontalwall = (i.points.y() == j.y // 1 + self.ballsize or i.points.y() == j.y // 1 - self.ballsize) \
+                                     and i.points.x() <= j.x < i.pointe.x()
+                    if e < 15 or d < 15 or horizontalwall or verticalwall:
+                        j.x = j.x - j.velx
+                        j.y = j.y - j.vely
 
     def getBoundePlayer_Player(self):
         for i in range(len(self.players)):
             for j in range(len(self.players)):
                 if i != j and i < j:
                     d = math.sqrt((self.players.x - self.players.x) ** 2 + (self.players.y - self.players.y) ** 2)
-                    if d < 30 / self.len:
-                        self.players.x = self.players.x - self.players.velx
-                        self.players.y = self.players.y - self.players.vely
+                    if d < 30:
+                        i.x = i.x - i.velx
+                        i.y = i.y - i.vely
 
 
     def getBounceWall(self):
         for i in self.balls:
             for j in self.walls:
-                if j.points.y() == i.getY() and j.points.x() == i.getX() or j.pointe.y() == i.getY() \
-                        and j.pointe.x() == i.getX():
+                if j.points.y() == i.getY() and j.points.x() == i.getX() or j.pointe.y() == i.getY() and j.pointe.x() == i.getX():
                     i.hitX()
                     i.hitY()
-                elif j.getSeite() % 2 == 0 and j.points.x() == i.getX()//1 and j.points.y() <= i.getY() // 1 < j.pointe.y():
+                elif j.getSeite() % 2 == 0 and j.points.x() == i.getX()//1 and j.points.y() <= i.getY()//1 and j.pointe.y() > i.getY()//1:
                     i.hitX()
-                elif j.getSeite() % 2 == 1 and j.points.y() == i.getY()//1 and j.points.x() <= i.getX() // 1 < j.pointe.x():
+                elif j.getSeite() % 2 == 1 and j.points.y() == i.getY()//1 and j.points.x() <= i.getX()//1 and j.pointe.x() > i.getX()//1:
                     i.hitY()
 
 
     def spawnBall(self,winkel, x , y, ID):
         if self.lebendig:
-            self.balls.append(Ball(math.cos(winkel) * 5, math.sin(winkel) * 5,
-                                   x + (math.cos(winkel) * 20),
-                                   y + math.sin(winkel) * 20, 1, 1, ID))
-
-    def resizeEvent(self, e):
-        # (ox,oy) steht für die linke obere Ecke des quadratischen Spielfeldes und dient als
-        # Ursprung des Koordinatensystems.
-        if self.width() > self.height():
-            self.len = self.height()
-            self.ox = (self.width() - self.height()) / 2
-            self.oy = 0
-        else:
-            self.len = self.width()
-            self.ox = 0
-            self.oy = (self.height() - self.width()) / 2
-
-        self.tex_scale = self.len/self.background_tex.width()
-
-
+            self.balls.append(Ball(math.cos(winkel) * 0.4, math.sin(winkel) * 0.4,
+                               x + (math.cos(winkel) * 20),
+                               y + math.sin(winkel) * 20, self.width(), self.height(), ID))
 
 
     def paintEvent(self, e):
@@ -558,6 +458,8 @@ class MyRenderArea(QWidget):
             self.walls = []
             self.wallsbuild = False
             self.wallscoordinates = []
+            self.x = 100
+            self.y = 100
             self.run = True
             self.lebendig = True
             self.winkel = 0
@@ -567,19 +469,19 @@ class MyRenderArea(QWidget):
             self.ballcount2 = 0
 
         self.getBounceWall()
-        #self.getBoundePlayer_Player()
+
         if not self.alive:
             for i in range(2):
                 self.players.append(Player(i+1))
                 self.alive = True
 
         if not self.wallsbuild:
-            self.level_id = random.randint(1, 8)
-            self.createWalls(self.level_id)
+            self.createWalls()
 
         self.playerMovment()
 
         self.getBoundeWallPlayer()
+        self.getBoundePlayer_Player()
         painter = QPainter(self)
 
         for j in self.players:
@@ -591,9 +493,9 @@ class MyRenderArea(QWidget):
             if i.alive:
                 painter.setBrush(QColor(i.color))
 
-                painter.drawEllipse(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y), self.ballsize, self.ballsize)
+                painter.drawEllipse(QPoint(i.x,i.y), self.ballsize, self.ballsize)
                 painter.setBrush(QColor('green'))
-                painter.drawLine(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y), QPoint(self.ox + self.len * i.x + (math.cos(i.winkel) * 20), self.ox + self.len * i.y + ((math.sin(i.winkel))) * 20))
+                painter.drawLine(QPoint(i.x,i.y), QPoint(i.x + (math.cos(i.winkel) * 20), i.y + ((math.sin(i.winkel))) * 20))
 
         for i in self.balls:
             i.move()
@@ -604,12 +506,12 @@ class MyRenderArea(QWidget):
                     self.ballcount2 -= 1
                 self.balls.remove(i)
             painter.setBrush(QColor('black'))
-            self.point = QPoint(self.ox + self.len * i.getX(), self.ox + self.len * i.getY())
+            self.point = QPoint(i.getX(), i.getY())
             painter.drawEllipse(self.point, 2, 2)
 
         for i in self.walls:
             painter.setBrush(QColor('black'))
-            painter.drawLine(i.points, i.pointe)
+            painter.drawLine(i.getStart(), i.getEnd())
 
 
         self.main.statusBar().clearMessage()
@@ -617,6 +519,7 @@ class MyRenderArea(QWidget):
                                           "Score Player2: " + str(self.score2))
 
 
+        self.update()
 
 
 

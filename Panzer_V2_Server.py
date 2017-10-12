@@ -119,6 +119,7 @@ class MyRenderArea(QWidget):
     def spawnPlayer(self):
         self.players.append(Player((0.5, 0.5)))
 
+
     def resizeEvent(self, e):
         # (ox,oy) steht für die linke obere Ecke des quadratischen Spielfeldes und dient als
         # Ursprung des Koordinatensystems.

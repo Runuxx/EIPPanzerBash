@@ -212,7 +212,7 @@ class MyRenderArea(QWidget):
             if i.keyDown[2] == False and i.keyDown[3] == False:
                 i.winkelnext = 0
 
-    def playerMovment(self):
+    def playerMovement(self):
         for i in self.players:
 
             if i.keyDown[0]:
