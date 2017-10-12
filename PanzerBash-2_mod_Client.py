@@ -465,7 +465,7 @@ class MyRenderArea(QWidget):
                                and i.points.y() <= j.y < i.pointe.y()
                 horizontalwall = (i.points.y() == j.y // 1 + self.ballsize or i.points.y() == j.y // 1 - self.ballsize) \
                                  and i.points.x() <= j.x < i.pointe.x()
-                if e < 15 or d < 15 or horizontalwall or verticalwall:
+                if e < 15  or d < 15 or horizontalwall or verticalwall:
                     j.x = j.x - j.velx
                     j.y = j.y - j.vely
 

@@ -19,7 +19,7 @@ class Ball():
         self.height = height
         self.life = 10000
         self.ID = ID
-        print(self.ID)
+        #print(self.ID)
 
 
 
@@ -129,8 +129,6 @@ class MyRenderArea(QWidget):
         self.winkel = 0
         self.winkelnext = 0
         self.players = []
-        self.ballcount1 = 0
-        self.ballcount2 = 0
         self.score1 = 0
         self.score2 = 0
 
@@ -181,7 +179,7 @@ class MyRenderArea(QWidget):
     def readData(self):
         instr = QDataStream(self.tcpSocket)
         data = instr.readQString()
-        print(data)
+        #print(data)
         for i in range(len(data)):
             if data[i] == "1":
                 self.players[1].keyDown[i] = True
@@ -206,7 +204,7 @@ class MyRenderArea(QWidget):
         block = QByteArray()
         out = QDataStream(block, QIODevice.ReadWrite)
         data = self.encode_game()
-        print(data)
+        #print(data)
         out.writeQString(data)
         self.tcpSocket.write(block)
 
@@ -280,7 +278,7 @@ class MyRenderArea(QWidget):
 
     def playerMovment(self):
         for i in self.players:
-            print(i.ID, i.keyDown)
+            #print(i.ID, i.keyDown)
             max_speed = 0.004
 
             if i.keyDown[0]:
@@ -294,10 +292,12 @@ class MyRenderArea(QWidget):
             if i.keyDown[3]:
                 i.winkelnext = + 0.05
             if i.keyDown[4]:
+                #print(i.ballcount)
                 i.keyDown[4] = False
                 if i.ballcount < 6:
                     i.ballcount += 1
                     self.spawnBall(i.winkel, i.x, i.y, i.ID)
+
                 else:
                     pass
 
@@ -477,10 +477,10 @@ class MyRenderArea(QWidget):
         d = math.sqrt((ball.x - j.x) ** 2 + (ball.y - j.y) ** 2)
         if d < 17 / self.len:
             if ball.ID == 1:
-                self.ballcount1 -= 1
+                j.ballcount -= 1
                 self.score2 += 1
             elif ball.ID == 2:
-                self.ballcount2 -= 1
+                j.ballcount -= 1
                 self.score1 += 1
             self.balls.remove(ball)
             return True
@@ -493,13 +493,17 @@ class MyRenderArea(QWidget):
             for j in self.players:
                 d = math.sqrt((i.points.x() - j.x) ** 2 + (i.points.y() - j.y) ** 2)
                 e = math.sqrt((i.pointe.x() - j.x) ** 2 + (i.pointe.y() - j.y) ** 2)
-                verticalwall = (i.points.x() * 100 == j.x * 100 // 1 + self.ballsize / self.len or
-                                i.points.x() * 100 == j.x * 100 // 1 - self.ballsize / self.len) \
-                               and i.points.y() <= j.y < i.pointe.y()
-                horizontalwall = (i.points.y() * 100 == j.y * 100 // 1 + self.ballsize / self.len or
-                                  i.points.y() * 100 == j.y * 100 // 1 - self.ballsize / self.len) \
-                                 and i.points.x() <= j.x < i.pointe.x()
-                if e < 15 / self.len or d < 15 / self.len or horizontalwall or verticalwall:
+                print(e, d)
+                verticalwall = (i.points.x() / self.len * 100 == j.x * 100 // 1 + self.ballsize / self.len or
+                                i.points.x() / self.len * 100 == j.x * 100 // 1 - self.ballsize / self.len) \
+                               and i.points.y() / self.len <= j.y < i.pointe.y() / self.len
+
+                horizontalwall = (i.points.y() / self.len * 100 == j.y * 100 // 1 + self.ballsize / self.len or
+                                  i.points.y() / self.len * 100 == j.y * 100 // 1 - self.ballsize / self.len) \
+                                 and i.points.x() / self.len <= j.x < i.pointe.x() / self.len
+                horizontalwall = False
+                verticalwall = False
+                if e < 15 or d < 15 or horizontalwall or verticalwall:
                     j.x = j.x - j.velx
                     j.y = j.y - j.vely
 
@@ -528,9 +532,11 @@ class MyRenderArea(QWidget):
 
     def spawnBall(self,winkel, x , y, ID):
         if self.lebendig:
-            self.balls.append(Ball(math.cos(winkel) * 5, math.sin(winkel) * 5,
-                                   x + (math.cos(winkel) * 20),
-                                   y + math.sin(winkel) * 20, 1, 1, ID))
+
+            self.balls.append(Ball(math.cos(winkel) * 5 / self.len, math.sin(winkel) * 5 / self.len,
+                                   x + (math.cos(winkel) * 20) / self.len,
+                                   y + (math.sin(winkel) * 20) / self.len, 1, 1, ID))
+
 
     def resizeEvent(self, e):
         # (ox,oy) steht für die linke obere Ecke des quadratischen Spielfeldes und dient als
@@ -593,9 +599,13 @@ class MyRenderArea(QWidget):
 
                 painter.drawEllipse(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y), self.ballsize, self.ballsize)
                 painter.setBrush(QColor('green'))
-                painter.drawLine(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y), QPoint(self.ox + self.len * i.x + (math.cos(i.winkel) * 20), self.ox + self.len * i.y + ((math.sin(i.winkel))) * 20))
+                painter.drawLine(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y),
+                                 QPoint(self.ox + self.len * i.x + (math.cos(i.winkel) * 20),
+                                        self.ox + self.len * i.y + (math.sin(i.winkel)) * 20))
 
         for i in self.balls:
+            #print(self.ox + self.len * i.x, self.ox + self.len * i.y)
+
             i.move()
             if i.getLife() <= 0:
                 if i.ID == 1:
@@ -604,7 +614,7 @@ class MyRenderArea(QWidget):
                     self.ballcount2 -= 1
                 self.balls.remove(i)
             painter.setBrush(QColor('black'))
-            self.point = QPoint(self.ox + self.len * i.getX(), self.ox + self.len * i.getY())
+            self.point = QPoint(self.ox + self.len * i.x, self.ox + self.len * i.y)
             painter.drawEllipse(self.point, 2, 2)
 
         for i in self.walls:
