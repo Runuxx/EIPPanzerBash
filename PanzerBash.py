@@ -100,6 +100,7 @@ class Player():
         if ID == 2:
             self.x = 500
             self.y = 500
+            self.winkel = math.pi
             self.color = 'blue'
 
 
@@ -424,13 +425,14 @@ class MyRenderArea(QWidget):
         for i in range(len(self.players)):
             for j in range(len(self.players)):
                 if i != j and i < j:
-                    d = math.sqrt((self.players.x - self.players.x) ** 2 + (self.players.y - self.players.y) ** 2)
+                    d = math.sqrt((self.players[i].x - self.players[j].x) ** 2 + (self.players[i].y - self.players[j].y) ** 2)
                     if d < 30:
-                        i.x = i.x - i.velx
-                        i.y = i.y - i.vely
+                        self.players[i].x = self.players[i].x - self.players[i].velx
+                        self.players[i].y = self.players[i].y - self.players[i].vely
+                        self.players[j].x = self.players[j].x - self.players[j].velx
+                        self.players[j].y = self.players[j].y - self.players[j].vely
 
-
-    def getBounceWall(self):
+    def getBoundeWallBall(self):
         for i in self.balls:
             for j in self.walls:
                 if j.points.y() == i.getY() and j.points.x() == i.getX() or j.pointe.y() == i.getY() and j.pointe.x() == i.getX():
@@ -468,7 +470,7 @@ class MyRenderArea(QWidget):
             self.ballcount1 = 0
             self.ballcount2 = 0
 
-        self.getBounceWall()
+        self.getBoundeWallBall()
 
         if not self.alive:
             for i in range(2):
@@ -481,7 +483,7 @@ class MyRenderArea(QWidget):
         self.playerMovement()
 
         self.getBoundeWallPlayer()
-        #self.getBoundePlayer_Player()
+        self.getBoundePlayer_Player()
         painter = QPainter(self)
 
         for j in self.players:

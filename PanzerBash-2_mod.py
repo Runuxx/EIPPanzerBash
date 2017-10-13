@@ -52,27 +52,31 @@ class Ball():
 
 
 class Wall():
-    def __init__(self, x, y, seite, height, width, ox, oy, len):
+    def __init__(self, x, y, seite, height, width, renderarea):
         self.width = width
         self.height = height
         self.seite = seite
         self.x = x
         self.y = y
-        self.draw(ox, oy, len)
+        self.renderarea = renderarea
 
-    def draw(self, ox, oy, len):
+        self.draw()
+
+
+
+    def draw(self):
         if self.seite == 4:
-            self.points = QPoint(ox + len * self.x, oy + len * self.y)
-            self.pointe = QPoint(ox + len * self.x,oy + len *  (self.y + self.height / 4))
+            self.points = QPoint(self.renderarea.ox + self.renderarea.len * self.x, self.renderarea.oy + self.renderarea.len * self.y)
+            self.pointe = QPoint(self.renderarea.ox + self.renderarea.len * self.x, self.renderarea.oy + self.renderarea.len *  (self.y + self.height / 4))
         if self.seite == 1:
-            self.points = QPoint(ox + len * self.x, oy + len * self.y)
-            self.pointe = QPoint(ox + len * (self.x + self.width / 4), oy + len * self.y)
+            self.points = QPoint(self.renderarea.ox + self.renderarea.len * self.x, self.renderarea.oy + self.renderarea.len * self.y)
+            self.pointe = QPoint(self.renderarea.ox + self.renderarea.len * (self.x + self.width / 4), self.renderarea.oy + self.renderarea.len * self.y)
         if self.seite == 2:
-            self.points = QPoint(ox + len * (self.x + self.width / 4), oy + len * self.y)
-            self.pointe = QPoint(ox + len * (self.x + self.width / 4), oy + len * (self.y + self.height / 4))
+            self.points = QPoint(self.renderarea.ox + self.renderarea.len * (self.x + self.width / 4), self.renderarea.oy + self.renderarea.len * self.y)
+            self.pointe = QPoint(self.renderarea.ox + self.renderarea.len * (self.x + self.width / 4), self.renderarea.oy + self.renderarea.len * (self.y + self.height / 4))
         if self.seite == 3:
-            self.points = QPoint(ox + len * self.x, oy + len * (self.y + self.height / 4))
-            self.pointe = QPoint(ox + len * (self.x + self.width / 4), oy + len * (self.y + self.height / 4))
+            self.points = QPoint(self.renderarea.ox + self.renderarea.len * self.x, self.renderarea.oy + self.renderarea.len * (self.y + self.height / 4))
+            self.pointe = QPoint(self.renderarea.ox + self.renderarea.len * (self.x + self.width / 4), self.renderarea.oy + self.renderarea.len * (self.y + self.height / 4))
 
 
 
@@ -97,6 +101,7 @@ class Player():
         if ID == 2:
             self.x = 0.9
             self.y = 0.9
+            self.winkel = 3.141
             self.color = 'blue'
 
 
@@ -155,6 +160,8 @@ class MyRenderArea(QWidget):
         # self.tcpServer.errorString() abgefragt werden.
 
         # Memberfunktion für eine Verbindungsanfrage eines Clients
+        #self.timer.timeout.connect(self.timer_funktion)
+        #self.timer.start(round(1000 / self.ups))
 
 
     def timer_funktion(self):
@@ -198,6 +205,15 @@ class MyRenderArea(QWidget):
                 player.winkel, 4))
             player_index += 1
         data += "l" + str(self.level_id)
+
+        data += "b"
+
+        for ball in self.balls:
+            data += str(round(ball.x, 4)) + "#" + str(round(ball.y, 4)) + "#"
+
+        data += "s" + str(self.score1) + "#" + str(self.score2)
+
+
         return data
 
     def writeData(self):
@@ -285,8 +301,8 @@ class MyRenderArea(QWidget):
                 i.velx = (math.cos(i.winkel) * max_speed)
                 i.vely = (math.sin(i.winkel) * max_speed)
             if i.keyDown[1]:
-                i.velx = (math.cos(i.winkel) * max_speed)
-                i.vely = (math.sin(i.winkel) * max_speed)
+                i.velx = -(math.cos(i.winkel) * max_speed)
+                i.vely = -(math.sin(i.winkel) * max_speed)
             if i.keyDown[2]:
                 i.winkelnext = - 0.05
             if i.keyDown[3]:
@@ -471,15 +487,15 @@ class MyRenderArea(QWidget):
             if (self.wallscoordinates[i][2] != 0):
                 self.walls.append(
                     Wall(self.wallscoordinates[i][0], self.wallscoordinates[i][1], self.wallscoordinates[i][2],
-                         1, 1, self.ox, self.oy, self.len))
+                         1, 1, self))
 
     def getbounceBallPlayer(self, ball, j):
         d = math.sqrt((ball.x - j.x) ** 2 + (ball.y - j.y) ** 2)
         if d < 17 / self.len:
-            if ball.ID == 1:
+            if j.ID == 1:
                 j.ballcount -= 1
                 self.score2 += 1
-            elif ball.ID == 2:
+            elif j.ID == 2:
                 j.ballcount -= 1
                 self.score1 += 1
             self.balls.remove(ball)
@@ -491,42 +507,49 @@ class MyRenderArea(QWidget):
 
         for i in self.walls:
             for j in self.players:
-                d = math.sqrt((i.points.x() - j.x) ** 2 + (i.points.y() - j.y) ** 2)
-                e = math.sqrt((i.pointe.x() - j.x) ** 2 + (i.pointe.y() - j.y) ** 2)
-                print(e, d)
-                verticalwall = (i.points.x() / self.len * 100 == j.x * 100 // 1 + self.ballsize / self.len or
-                                i.points.x() / self.len * 100 == j.x * 100 // 1 - self.ballsize / self.len) \
-                               and i.points.y() / self.len <= j.y < i.pointe.y() / self.len
+                d = math.sqrt(((i.points.x() - self.ox) / self.len - j.x) ** 2 + ((i.points.y() - self.oy) / self.len - j.y) ** 2)
+                e = math.sqrt(((i.pointe.x() - self.ox) / self.len - j.x) ** 2 + ((i.pointe.y() - self.oy) / self.len - j.y) ** 2)
 
-                horizontalwall = (i.points.y() / self.len * 100 == j.y * 100 // 1 + self.ballsize / self.len or
-                                  i.points.y() / self.len * 100 == j.y * 100 // 1 - self.ballsize / self.len) \
-                                 and i.points.x() / self.len <= j.x < i.pointe.x() / self.len
-                horizontalwall = False
-                verticalwall = False
-                if e < 15 or d < 15 or horizontalwall or verticalwall:
-                    j.x = j.x - j.velx
+                verticalwall = (round((i.points.x() - self.ox) / self.len, 2) == round(j.x + self.ballsize / self.len, 2) or
+                                round((i.points.x() - self.ox) / self.len, 2) == round((j.x - self.ballsize / self.len), 2)) \
+                               and (i.points.y() - self.oy) / self.len <= j.y < (i.pointe.y() - self.oy) / self.len
+
+                horizontalwall = (round((i.points.y() - self.oy) / self.len, 2) == round(j.y + self.ballsize / self.len, 2) or
+                                round((i.points.y() - self.oy) / self.len, 2) == round(j.y - self.ballsize / self.len, 2)) \
+                               and (i.points.x() - self.ox) / self.len <= j.x < (i.pointe.x() - self.ox) / self.len
+
+
+                if e < self.ballsize / self.len or d < self.ballsize / self.len or horizontalwall:
                     j.y = j.y - j.vely
+                if e < self.ballsize / self.len or d < self.ballsize / self.len or verticalwall:
+                    j.x = j.x - j.velx
+
 
     def getBoundePlayer_Player(self):
         for i in range(len(self.players)):
             for j in range(len(self.players)):
                 if i != j and i < j:
-                    d = math.sqrt((self.players.x - self.players.x) ** 2 + (self.players.y - self.players.y) ** 2)
-                    if d < 30 / self.len:
-                        self.players.x = self.players.x - self.players.velx
-                        self.players.y = self.players.y - self.players.vely
+                    d = math.sqrt((self.players[j].x - self.players[i].x) ** 2 + (self.players[j].y - self.players[i].y) ** 2)
+                    if d < self.ballsize * 2 / self.len:
+                        self.players[i].x = self.players[i].x - self.players[i].velx
+                        self.players[i].y = self.players[i].y - self.players[i].vely
+                        self.players[j].x = self.players[j].x - self.players[j].velx
+                        self.players[j].y = self.players[j].y - self.players[j].vely
 
 
     def getBounceWall(self):
         for i in self.balls:
             for j in self.walls:
-                if j.points.y() == i.getY() and j.points.x() == i.getX() or j.pointe.y() == i.getY() \
-                        and j.pointe.x() == i.getX():
+                print(round((i.getX()),2), round(i.getY(), 2))
+                if (round((j.points.y() - self.oy) / self.len, 2) == round(i.getY(), 2) and round((j.points.x() - self.ox) / self.len, 2) == round(i.getX(), 2)) \
+                or (round((j.pointe.y() - self.oy) / self.len, 2) == round(i.getY(), 2) and round((j.points.x() - self.ox) / self.len, 2) == round(i.getX(), 2)):
                     i.hitX()
                     i.hitY()
-                elif j.getSeite() % 2 == 0 and j.points.x() == i.getX()//1 and j.points.y() <= i.getY() // 1 < j.pointe.y():
+                elif j.getSeite() % 2 == 0 and round((j.points.x() - self.ox) / self.len, 2) == round(i.getX(), 2) \
+                        and (j.points.y() - self.oy) / self.len <= i.getY() < (j.pointe.y() - self.oy) / self.len:
                     i.hitX()
-                elif j.getSeite() % 2 == 1 and j.points.y() == i.getY()//1 and j.points.x() <= i.getX() // 1 < j.pointe.x():
+                elif j.getSeite() % 2 == 1 and round((j.pointe.y() - self.oy) / self.len, 2) == round(i.getY(), 2) \
+                        and (j.points.x() - self.ox) / self.len <= i.getX() < (j.pointe.x() - self.ox) / self.len:
                     i.hitY()
 
 
@@ -539,6 +562,7 @@ class MyRenderArea(QWidget):
 
 
     def resizeEvent(self, e):
+
         # (ox,oy) steht für die linke obere Ecke des quadratischen Spielfeldes und dient als
         # Ursprung des Koordinatensystems.
         if self.width() > self.height():
@@ -551,6 +575,8 @@ class MyRenderArea(QWidget):
             self.oy = (self.height() - self.width()) / 2
 
         self.tex_scale = self.len/self.background_tex.width()
+        for i in self.walls:
+            i.draw()
 
 
 
@@ -586,7 +612,12 @@ class MyRenderArea(QWidget):
         self.playerMovment()
 
         self.getBoundeWallPlayer()
+        self.getBoundePlayer_Player()
         painter = QPainter(self)
+        painter.setBrush(QColor('black'))
+
+        painter.drawRect(0, 0, self.width(), self.height())
+        painter.drawImage(self.ox, self.oy, self.background_tex.scaled(self.len, self.len))
 
         for j in self.players:
             for i in self.balls:
@@ -597,11 +628,11 @@ class MyRenderArea(QWidget):
             if i.alive:
                 painter.setBrush(QColor(i.color))
 
-                painter.drawEllipse(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y), self.ballsize, self.ballsize)
+                painter.drawEllipse(QPoint(self.ox + self.len * i.x, self.oy + self.len * i.y), self.ballsize, self.ballsize)
                 painter.setBrush(QColor('green'))
-                painter.drawLine(QPoint(self.ox + self.len * i.x,self.ox + self.len * i.y),
+                painter.drawLine(QPoint(self.ox + self.len * i.x, self.oy + self.len * i.y),
                                  QPoint(self.ox + self.len * i.x + (math.cos(i.winkel) * 20),
-                                        self.ox + self.len * i.y + (math.sin(i.winkel)) * 20))
+                                        self.oy + self.len * i.y + (math.sin(i.winkel)) * 20))
 
         for i in self.balls:
             #print(self.ox + self.len * i.x, self.ox + self.len * i.y)
@@ -614,7 +645,7 @@ class MyRenderArea(QWidget):
                     self.ballcount2 -= 1
                 self.balls.remove(i)
             painter.setBrush(QColor('black'))
-            self.point = QPoint(self.ox + self.len * i.x, self.ox + self.len * i.y)
+            self.point = QPoint(self.ox + self.len * i.x, self.oy + self.len * i.y)
             painter.drawEllipse(self.point, 2, 2)
 
         for i in self.walls:

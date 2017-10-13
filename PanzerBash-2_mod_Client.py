@@ -145,6 +145,7 @@ class MyRenderArea(QWidget):
         self.ballcount2 = 0
         self.score1 = 0
         self.score2 = 0
+        self.ball_pos = []
 
         self.level_id = 1
         self.wallscoordinates = []
@@ -169,15 +170,36 @@ class MyRenderArea(QWidget):
         if raw_data != "":
             self.writeData()
             self.update()
-        data = raw_data.split("l")
+        data2 = raw_data.split("s")
 
-        if self.level_id != int(data[1]):
-            self.level_id = int(data[1])
+        score = data2[1].split("#")
+
+        self.score1 = int(score[0])
+        self.score29 = int(score[1])
+
+        data = data2[0].split("b")
+
+        print("b", data[1])
+        data_balls = data[1].split("#")
+        if len(data_balls) > 1:
+            del data_balls[-1]
+            self.ball_pos = []
+            for i in range(0, len(data_balls), 2):
+                self.ball_pos.append((float(data_balls[i]), float(data_balls[i+1])))
+        else:
+            self.ball_pos = []
+
+        print("ballData", self.ball_pos)
+        data_level = data[0].split("l")
+        #print("l", data_level)
+
+        if self.level_id != int(data_level[1]):
+            self.level_id = int(data_level[1])
             self.lebendig = False
-            print("HI", self.wallsbuild)
+            #print("HI", self.wallsbuild)
 
-        data_players = data[0].split("p")
 
+        data_players = data_level[0].split("p")
         if len(data_players) > 1:
             del data_players[0]
             self.game_data = data_players
@@ -194,6 +216,9 @@ class MyRenderArea(QWidget):
                 controls += "0"
         if self.players[1].keyDown[4]:
             self.players[1].keyDown[4] = False
+
+
+
         print("OUT: ", controls)
 
         out.writeQString(controls)
@@ -459,7 +484,7 @@ class MyRenderArea(QWidget):
     def getBoundeWallPlayer(self):
         for i in self.walls:
             for j in self.players:
-                d = math.sqrt((i.points.x() - j.x) ** 2 + (i.points.y() - j.y) ** 2)
+                d = math.sqrt((i.points.x() / self.len - j.x) ** 2 + (i.points.y() /self.len - j.y) ** 2)
                 e = math.sqrt((i.pointe.x() - j.x) ** 2 + (i.pointe.y() - j.y) ** 2)
                 verticalwall = (i.points.x() == j.x // 1 + self.ballsize or i.points.x() == j.x // 1 - self.ballsize) \
                                and i.points.y() <= j.y < i.pointe.y()
@@ -556,10 +581,17 @@ class MyRenderArea(QWidget):
             if i.alive:
                 painter.setBrush(QColor(i.color))
 
-                painter.drawEllipse(QPoint(self.ox + self.len * i.x, self.ox + self.len * i.y), self.ballsize, self.ballsize)
+                painter.drawEllipse(QPoint(self.ox + self.len * i.x, self.oy + self.len * i.y), self.ballsize, self.ballsize)
                 painter.setBrush(QColor('green'))
-                painter.drawLine(QPoint(self.ox + self.len * i.x, self.ox + self.len * i.y), QPoint(self.ox + self.len * i.x + (math.cos(i.winkel) * 20), self.ox + self.len * i.y + ((math.sin(i.winkel))) * 20))
+                painter.drawLine(QPoint(self.ox + self.len * i.x, self.oy + self.len * i.y), QPoint(self.ox + self.len * i.x + (math.cos(i.winkel) * 20), self.oy + self.len * i.y + ((math.sin(i.winkel))) * 20))
 
+
+        for i in self.ball_pos:
+            painter.setBrush(QColor('black'))
+            self.point = QPoint(self.ox + self.len * i[0], self.oy + self.len * i[1])
+            painter.drawEllipse(self.point, 2, 2)
+
+        '''
         for i in self.balls:
             i.move()
             if i.getLife() <= 0:
@@ -571,6 +603,7 @@ class MyRenderArea(QWidget):
             painter.setBrush(QColor('black'))
             self.point = QPoint(self.ox + self.len * i.getX(), self.ox + self.len * i.getY())
             painter.drawEllipse(self.point, 2, 2)
+        '''
 
         for i in self.walls:
             painter.setBrush(QColor('black'))
